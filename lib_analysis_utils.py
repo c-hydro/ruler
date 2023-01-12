@@ -10,6 +10,7 @@ Version:       '1.0.0'
 #######################################################################################
 # Libraries
 import logging
+import subprocess
 import math
 import psutil
 from psutil._common import bytes2human
@@ -21,6 +22,108 @@ from lib_info_args import logger_name
 # Logging
 log_stream = logging.getLogger(logger_name)
 #######################################################################################
+
+
+# -------------------------------------------------------------------------------------
+# Method to get sysctl value
+def get_memory_sysctl_value(key):
+    command = "sysctl %s" % key
+    line = subprocess.check_output(command, shell=True).strip()
+    line_sp = line.split()
+    return line_sp[2].decode("utf-8")
+# -------------------------------------------------------------------------------------
+
+
+# -------------------------------------------------------------------------------------
+# Method to get memory usage by linux command
+def get_linux_memory_usage(advices=True):
+
+    # virtual_memory_header = 'total used free shared buff/cache available'
+    # swap_memory_header = 'total used free'
+
+    size_name_long = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    size_name_short = ("B", "K", "M", "G", "T", "P", "E", "Z", "Y")
+
+    command = "free -h"
+    all_info = subprocess.check_output(command, shell=True).strip()
+
+    virtual_memory_total, virtual_memory_used, virtual_memory_free = None, None, None
+    virtual_memory_shared, virtual_memory_filesystem_cache, virtual_memory_available = None, None, None
+    swap_memory_total, swap_memory_used, swap_memory_free, swap_memory_swappiness = None, None, None, None
+    for line in all_info.decode("utf-8").split("\n"):
+
+        if 'total' in line:
+            line_header = line.split()
+
+        if "Mem:" in line:
+            line_virtual_memory = line.split()
+            virtual_memory_total = line_virtual_memory[1]
+            virtual_memory_used = line_virtual_memory[2]
+            virtual_memory_free = line_virtual_memory[3]
+            virtual_memory_shared = line_virtual_memory[4]
+            virtual_memory_filesystem_cache = line_virtual_memory[5]
+            virtual_memory_available = line_virtual_memory[6]
+
+        if "Swap:" in line:
+            line_swap_memory = line.split()
+            swap_memory_total = line_swap_memory[1]
+            swap_memory_used = line_swap_memory[2]
+            swap_memory_free = line_swap_memory[3]
+            swap_memory_swappiness = int(get_memory_sysctl_value('vm.swappiness'))
+
+            if (swap_memory_swappiness <= 10) and (swap_memory_swappiness > 0):
+                log_stream.info(' ------> Swappiness value is good [value = "' + str(swap_memory_swappiness) + '"]')
+            elif swap_memory_swappiness == 0:
+                log_stream.warning(' ===> Swappiness value 0 is dangerous, '
+                                   'set it to 5 [value = "' + str(swap_memory_swappiness) + '"]')
+            else:
+                log_stream.warning(' ===> Swappiness value is to high, '
+                                   'set it to a value between 1 and 10 [value = "' + str(swap_memory_swappiness) + '"]')
+
+    virtual_memory_usage = {
+        'total': virtual_memory_total, 'used': virtual_memory_used,
+        'free': virtual_memory_free, 'shared': virtual_memory_shared,
+        'filesystem_buff_cache': virtual_memory_filesystem_cache, 'available': virtual_memory_available
+        }
+    swap_memory_usage = {'total': swap_memory_total, 'used': swap_memory_used,
+                         'free': swap_memory_free, 'swappiness': swap_memory_swappiness}
+
+    for vm_key, vm_value in virtual_memory_usage.items():
+        if isinstance(vm_value, str):
+            vm_numeric, vm_units = split_size_parts(vm_value)
+            if vm_units.__len__() == 2:
+                vm_units = vm_units[0]
+                if vm_units not in size_name_short:
+                    log_stream.error(' ===> Variable "vm_units" not available in default values')
+                    raise NotImplemented('Case not implemented yet')
+            vm_memory = ''.join([vm_numeric, vm_units])
+        elif isinstance(vm_value, int):
+            vm_memory = deepcopy(vm_value)
+        else:
+            log_stream.error(' ===> Variable "vm_value" type is not supported')
+            raise NotImplemented('Case not implemented yet')
+
+        virtual_memory_usage[vm_key] = vm_memory
+
+    for sm_key, sm_value in swap_memory_usage.items():
+        if isinstance(sm_value, str):
+            sm_numeric, sm_units = split_size_parts(sm_value)
+            if sm_units.__len__() == 2:
+                sm_units = sm_units[0]
+                if sm_units not in size_name_short:
+                    log_stream.error(' ===> Variable "vm_units" not available in default values')
+                    raise NotImplemented('Case not implemented yet')
+            sm_memory = ''.join([sm_numeric, sm_units])
+        elif isinstance(sm_value, int):
+            sm_memory = deepcopy(sm_value)
+        else:
+            log_stream.error(' ===> Variable "vm_value" type is not supported')
+            raise NotImplemented('Case not implemented yet')
+
+        swap_memory_usage[sm_key] = sm_memory
+
+    return virtual_memory_usage, swap_memory_usage
+# -------------------------------------------------------------------------------------
 
 
 # -------------------------------------------------------------------------------------
@@ -37,6 +140,11 @@ def split_size_parts(size_string):
             elif size_elem.isnumeric() or size_elem == '.':
                 if size_numeric_list is None:
                     size_numeric_list = []
+                size_numeric_list.append(size_elem)
+            elif size_elem.isnumeric() or size_elem == ',':
+                if size_numeric_list is None:
+                    size_numeric_list = []
+                size_elem = size_elem.replace(',', '.')
                 size_numeric_list.append(size_elem)
             else:
                 log_stream.error(' ===> Object "size_string" must be defined only by character or numbers')

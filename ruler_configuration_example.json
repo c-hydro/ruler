@@ -17,8 +17,8 @@
       "algorithm": {
         "activate_report_organize": false,
         "activate_report_dump": false,
-        "activate_report_view": false,
-        "activate_report_kill": true
+        "activate_report_view": true,
+        "activate_report_kill": false
       }
     },
     "template": {
@@ -44,7 +44,10 @@
         "process_memory_type": "full",
         "process_sort": "ascending",
         "process_filter": "first",
-        "process_attributes": ["pid", "username", "memory_info", "memory_percent", "name",  "cpu_percent", "cpu_times", "create_time", "status"]
+        "process_attributes": [
+          "pid", "username", "memory_info", "memory_percent", "name",
+          "cmdline",
+          "cpu_percent", "cpu_times", "create_time", "status"]
       },
       "tool_info_disk": {
         "__comment__": "",
@@ -66,7 +69,7 @@
   },
   "process": {
     "__comment__": "monitoring_time_period: 10sec, null",
-    "name": "skypeforlinux",
+    "name": "ruler_loop.py",
     "analysis_time_frequency": "2sec",
     "analysis_time_period": "2min",
     "analysis_tools": ["tool_info_memory", "tool_info_process", "tool_info_disk", "tool_info_system_load"]

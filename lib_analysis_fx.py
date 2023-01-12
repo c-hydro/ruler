@@ -20,7 +20,7 @@ from operator import itemgetter
 from copy import deepcopy
 
 from lib_info_args import logger_name
-from lib_analysis_utils import convert_bytes2human_obj, convert_obj2dict
+from lib_analysis_utils import convert_bytes2human_obj, convert_obj2dict, get_linux_memory_usage
 
 # Logging
 log_stream = logging.getLogger(logger_name)
@@ -32,48 +32,49 @@ log_stream = logging.getLogger(logger_name)
 def filter_process_info(process_list, process_filter='first'):
 
     process_filtered = None
-    if process_filter is not None:
+    if process_list is not None:
+        if process_filter is not None:
 
-        # define filter string
-        if isinstance(process_filter, list):
-            tmp_name = [str(elem) for elem in process_filter]
-            filter_name = '.'.join(tmp_name)
-        else:
-            filter_name = deepcopy(process_filter)
+            # define filter string
+            if isinstance(process_filter, list):
+                tmp_name = [str(elem) for elem in process_filter]
+                filter_name = '.'.join(tmp_name)
+            else:
+                filter_name = deepcopy(process_filter)
 
-        log_stream.info(' -------> Filter process info using "' + filter_name + '" mode ... ')
+            log_stream.info(' -------> Filter process info using "' + filter_name + '" mode ... ')
 
-        if isinstance(process_filter, str):
-            if process_filter == 'first':
-                filter_idx = [0]
-            elif process_filter == 'last':
-                filter_idx = [-1]
-            elif process_filter == 'all':
-                filter_idx = np.arange(0, process_list.__len__(), 1, dtype=int)
+            if isinstance(process_filter, str):
+                if process_filter == 'first':
+                    filter_idx = [0]
+                elif process_filter == 'last':
+                    filter_idx = [-1]
+                elif process_filter == 'all':
+                    filter_idx = np.arange(0, process_list.__len__(), 1, dtype=int)
+                else:
+                    log_stream.error(' ===> Process filter type "' + filter_name + '" is not supported')
+                    raise NotImplemented('Case not implemented yet')
+
+            elif isinstance(process_filter, list):
+                filter_idx = deepcopy(process_filter)
             else:
                 log_stream.error(' ===> Process filter type "' + filter_name + '" is not supported')
                 raise NotImplemented('Case not implemented yet')
 
-        elif isinstance(process_filter, list):
-            filter_idx = deepcopy(process_filter)
+            # filter processes by index
+            if filter_idx.__len__() == 1:
+                process_filtered = [process_list[filter_idx[0]]]
+            elif filter_idx.__len__() > 1:
+                process_filtered = list(itemgetter(*filter_idx)(process_list))
+            else:
+                process_filtered = process_list[:]
+
+            log_stream.info(' -------> Filter process info using "' + filter_name + '" mode ... DONE')
+
         else:
-            log_stream.error(' ===> Process filter type "' + filter_name + '" is not supported')
-            raise NotImplemented('Case not implemented yet')
-
-        # filter processes by index
-        if filter_idx.__len__() == 1:
-            process_filtered = [process_list[filter_idx[0]]]
-        elif filter_idx.__len__() > 1:
-            process_filtered = list(itemgetter(*filter_idx)(process_list))
-        else:
-            process_filtered = process_list[:]
-
-        log_stream.info(' -------> Filter process info using "' + filter_name + '" mode ... DONE')
-
-    else:
-        # copy list without endpoint(s)
-        if process_list is not None:
-            process_filtered = process_list[:]
+            # copy list without endpoint(s)
+            if process_list is not None:
+                process_filtered = process_list[:]
 
     return process_filtered
 
@@ -84,21 +85,22 @@ def filter_process_info(process_list, process_filter='first'):
 # method to sort process info
 def sort_process_info(process_list, values_list, values_order_type=None):
 
-    if values_order_type is not None:
-        log_stream.info(' -------> Sort process info in "' + values_order_type + '" mode ... ')
-        values_array = np.array(values_list)
-        if values_order_type == 'ascending':
-            index_sorted = np.argsort(values_array)
-        elif values_order_type == 'descending':
-            index_sorted = np.argsort(values_array)[::-1]
-        else:
-            log_stream.error(' ===> Process order type "' + values_order_type + '" is not supported')
-            raise NotImplemented('Case not implemented yet')
+    if values_list is not None:
+        if values_order_type is not None:
+            log_stream.info(' -------> Sort process info in "' + values_order_type + '" mode ... ')
+            values_array = np.array(values_list)
+            if values_order_type == 'ascending':
+                index_sorted = np.argsort(values_array)
+            elif values_order_type == 'descending':
+                index_sorted = np.argsort(values_array)[::-1]
+            else:
+                log_stream.error(' ===> Process order type "' + values_order_type + '" is not supported')
+                raise NotImplemented('Case not implemented yet')
 
-        values_list[:] = [values_list[i] for i in index_sorted]
-        process_list[:] = [process_list[i] for i in index_sorted]
+            values_list[:] = [values_list[i] for i in index_sorted]
+            process_list[:] = [process_list[i] for i in index_sorted]
 
-        log_stream.info(' -------> Sort process info in "' + values_order_type + '" mode ... DONE')
+            log_stream.info(' -------> Sort process info in "' + values_order_type + '" mode ... DONE')
 
     return process_list
 # -------------------------------------------------------------------------------------
@@ -112,24 +114,26 @@ def get_process_info(process_name, process_sort=None, process_filter=None, verbo
     log_stream.info(' ------> Get process info "' + process_name + '" ... ')
 
     # Iterate over all running process
-    process_obj_list, process_vms_list = None, None
+    process_obj_list, process_vms_list, process_cmd_list = None, None, None
     for process_obj_step in psutil.process_iter(["name", "exe", "cmdline", "username"]):
 
         process_info_step = process_obj_step.info
         process_name_step = process_obj_step.name()
+        process_cmdline_step = " ".join(process_obj_step.cmdline())
 
         if verbose:
             log_stream.info(' -------> Found process info "' + process_name_step + '" ... ')
 
-        if process_name == process_info_step['name'] or \
-                process_info_step['exe'] and os.path.basename(process_info_step['exe']) == process_name or \
-                process_info_step['cmdline'] and process_info_step['cmdline'][0] == process_name:
+        if (process_name == process_info_step['name']) or (process_name in process_cmdline_step):
+                #process_info_step['exe'] and os.path.basename(process_info_step['exe']) == process_name or \
+                #process_info_step['cmdline'] and process_info_step['cmdline'][0] == process_name:
 
             process_name_step = process_obj_step.name()
             process_id_step = process_obj_step.pid
             process_vms_step = process_obj_step.memory_info().vms / (1024 * 1024)
+            process_cmdline_step = " ".join(process_obj_step.cmdline())
 
-            if process_name == process_name_step:
+            if (process_name == process_name_step) or (process_name in process_cmdline_step):
                 if process_obj_list is None:
                     process_obj_list = []
                 process_obj_list.append(process_obj_step)
@@ -137,6 +141,10 @@ def get_process_info(process_name, process_sort=None, process_filter=None, verbo
                 if process_vms_list is None:
                     process_vms_list = []
                 process_vms_list.append(process_vms_step)
+
+                if process_cmd_list is None:
+                    process_cmd_list = []
+                process_cmd_list.append(process_cmdline_step)
 
                 log_stream.info(' -------> Found ::: ProcessName "' + process_name_step +
                                 '" ::: ProcessID "' + str(process_id_step) + '"')
@@ -165,7 +173,8 @@ def get_process_info(process_name, process_sort=None, process_filter=None, verbo
 
 # -------------------------------------------------------------------------------------
 # method to get process
-def add_process_info(obj_process, obj_memory,  prefix_percent='percent', separator_percent='_'):
+def add_process_info(obj_process, obj_memory,
+                     prefix_percent='percent', separator_percent='_', format_percent="{:.4f}"):
 
     # cpu info parts
     cpu_affinity = obj_process.cpu_affinity()
@@ -182,6 +191,7 @@ def add_process_info(obj_process, obj_memory,  prefix_percent='percent', separat
 
         if memory_info_name in memory_info_list_process:
             memory_info_percent = obj_process.memory_percent(memtype=memory_info_name)
+            memory_info_percent = float(format_percent.format(memory_info_percent))
             memory_info_tag = separator_percent.join([prefix_percent, memory_info_name])
             memory_info_collections[memory_info_tag] = memory_info_percent
         else:
@@ -196,7 +206,7 @@ def add_process_info(obj_process, obj_memory,  prefix_percent='percent', separat
 
 # -------------------------------------------------------------------------------------
 # method to organize process info
-def organize_process_info(obj_process_list, prefix_name=None, separator_name='_',
+def organize_process_info(obj_process_list, prefix_name=None, separator_name='_', percent_format="{:.4f}",
                           process_attributes=None, process_memory_type='full', **kwargs):
     # https://thispointer.com/python-get-list-of-all-running-processes-and-sort-by-highest-memory-usage/
 
@@ -259,7 +269,10 @@ def organize_process_info(obj_process_list, prefix_name=None, separator_name='_'
                     info_fields_collections[info_key_raw] = deepcopy(info_value_raw)
                 elif isinstance(info_value_raw, list):
                     info_value_list = [str(info_value_step) for info_value_step in info_value_raw]
-                    info_value_str = ','.join(info_value_list)
+                    if info_key_raw == 'cmdline':
+                        info_value_str = ' '.join(info_value_list)
+                    else:
+                        info_value_str = ','.join(info_value_list)
                     info_fields_collections[info_key_raw] = info_value_str
                 elif isinstance(info_value_raw, tuple):
                     info_fields_tmp = convert_obj2dict(info_value_raw)
@@ -275,6 +288,9 @@ def organize_process_info(obj_process_list, prefix_name=None, separator_name='_'
 
                     if info_key_sub == 'create_time':
                         info_value_sub = datetime.datetime.fromtimestamp(info_value_sub).strftime("%Y-%m-%d %H:%M:%S")
+
+                    if 'percent' in info_key_sub:
+                        info_value_sub = float(percent_format.format(info_value_sub))
 
                     info_key_tmp = separator_name.join([prefix_name, info_key_sub])
                     info_key_format = {'proc_n': str(obj_process_id)}
@@ -345,6 +361,10 @@ def get_memory_info():
     obj_swap_memory = psutil.swap_memory()
     dict_swap_memory_bytes = convert_obj2dict(obj_swap_memory)
     dict_swap_memory_human = convert_bytes2human_obj(dict_swap_memory_bytes)
+
+    dict_virtual_memory_human_extras, dict_swap_memory_human_extras = get_linux_memory_usage()
+
+    dict_swap_memory_human['swappiness'] = deepcopy(dict_swap_memory_human_extras['swappiness'])
 
     # Info get memory info end
     log_stream.info(' ------> Get memory info ... DONE')

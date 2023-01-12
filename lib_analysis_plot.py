@@ -19,6 +19,9 @@ from lib_info_args import logger_name
 
 import matplotlib.pylab as plt
 
+# Set debug level for matplotlib font manager
+logging.getLogger('matplotlib.font_manager').disabled = True
+
 # Logging
 log_stream = logging.getLogger(logger_name)
 #######################################################################################
@@ -246,7 +249,7 @@ def plot_memory_info(dframe_analysis, dframe_file_path=None, columns_name=None,
     if prefix_separator is None:
         prefix_separator = '_'
     if columns_name is None:
-        columns_name = ['total', 'used', 'free', 'percent']
+        columns_name = ['total', 'used', 'free', 'buffers', 'cached', 'available', 'percent']
 
     columns_amount_tag, columns_percent_tag = [], []
     for columns_step in columns_name:

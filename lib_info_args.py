@@ -1,3 +1,12 @@
+"""
+Library Features:
+
+Name:          lib_info_args
+Author(s):     Fabio Delogu (fabio.delogu@cimafoundation.org)
+Date:          '20221227'
+Version:       '1.0.0'
+"""
+
 #######################################################################################
 # Library
 import pandas as pd
@@ -13,8 +22,8 @@ time_format_algorithm = '%Y-%m-%d %H:%M'
 time_machine = pd.Timestamp.now
 
 # Logging information
-logger_name = 'memory_process_logger'
-logger_file = 'memory_process.txt'
+logger_name = 'ruler_logger'
+logger_file = 'ruler_logger.txt'
 logger_handle = 'file'  # 'file' or 'stream'
 logger_format = '%(asctime)s %(name)-12s %(levelname)-8s ' \
                 '%(message)-80s %(filename)s:[%(lineno)-6s - %(funcName)-20s()] '
