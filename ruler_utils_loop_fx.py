@@ -1,10 +1,16 @@
 """
-Library Features:
+RULER LIBRARY - UTILS - Loop process
 
-Name:          ruler_process
-Author(s):     Fabio Delogu (fabio.delogu@cimafoundation.org)
-Date:          '20211208'
-Version:       '1.0.0'
+__date__ = '20221227'
+__version__ = '1.0.0'
+__author__ = 'Fabio Delogu (fabio.delogu@cimafoundation.org)'
+__library__ = 'ruler'
+
+General command line:
+python ruler_utils_loop_fx.py
+
+Version(s):
+20221227 (1.0.0) --> Beta release based on https://github.com/giampaolo/psutil
 """
 #######################################################################################
 # Libraries
@@ -15,7 +21,7 @@ from datetime import datetime
 # -------------------------------------------------------------------------------------
 # Algorithm information
 project_name = 'RULER'
-alg_name = 'APP EXAMPLE'
+alg_name = 'LOOP PROCESS UTILS'
 alg_type = 'Package'
 alg_version = '1.0.0'
 alg_release = '2022-12-27'

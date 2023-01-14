@@ -12,6 +12,8 @@ Version:       '1.0.0'
 import logging
 import subprocess
 import math
+import re
+import numpy as np
 import psutil
 from psutil._common import bytes2human
 from psutil._common import pcputimes
@@ -131,8 +133,18 @@ def get_linux_memory_usage(advices=True):
 def split_size_parts(size_string):
 
     if size_string is not None:
+
+        # remove scientific notation from string
+        if 'e-' in size_string or 'e+' in size_string:
+            match_number = re.compile('-?\ *[0-9]+\.?[0-9]*(?:[Ee]\ *-?\ *[0-9]+)?')
+            num_str_scientific_notation = str(float(re.findall(match_number, size_string)[0]))
+            num_str_float = np.format_float_positional(float(num_str_scientific_notation), trim='-')
+
+            size_string = size_string.replace(num_str_scientific_notation, num_str_float)
+
         size_alpha_list, size_numeric_list = None, None
         for size_elem in size_string:
+
             if size_elem.isalpha():
                 if size_alpha_list is None:
                     size_alpha_list = []

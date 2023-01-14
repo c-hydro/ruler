@@ -68,9 +68,9 @@ def plot_disk_info(dframe_analysis, dframe_file_path=None, columns_name=None,
     top.set_title(fig_title, fontsize=10, fontweight="bold")
 
     # get plot dataframe 1
-    ax1 = dframe_amount_num.plot(ax=top, lw=2, colormap='jet', marker='.', markersize=5) # title=fig_title)
+    ax1 = dframe_amount_num.plot(ax=top, lw=1, colormap='jet', marker='.', markersize=2) # title=fig_title)
     # get plot dataframe 2
-    ax2 = dframe_percent.plot(ax=bottom, lw=2, colormap='jet', marker='.', markersize=5, use_index=False)
+    ax2 = dframe_percent.plot(ax=bottom, lw=1, colormap='jet', marker='.', markersize=2, use_index=False)
 
     # set axis and label 1
     # ax1.set_xticks(x_ticks, minor=True)

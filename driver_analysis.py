@@ -356,6 +356,8 @@ class DriverAnalysis:
                     report_analysis_filter, dframe_units='T', dframe_format='{:0.5}', **tool_attrs)
                 plot_disk_info(report_analysis_view, dframe_file_path=report_analysis_file)
 
+        print('cioa')
+
     # -------------------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------------------
@@ -477,7 +479,8 @@ class DriverAnalysis:
                             report_analysis_collections = deepcopy(report_analysis_id)
                         else:
                             # merge analysis dframe
-                            report_analysis_collections = pd.concat([report_analysis_collections, report_analysis_id], axis=0)
+                            report_analysis_collections = pd.concat(
+                                [report_analysis_collections, report_analysis_id], axis=0)
 
                         log_stream.info(' -----> Get analysis file "' + report_file_path_anc_id + '" ... DONE')
                     else:
@@ -525,7 +528,8 @@ class DriverAnalysis:
             if os.path.exists(report_file_path_dst):
 
                 # read analysis from csv file
-                report_analysis = read_csv(report_file_path_dst, file_separator=self.report_file_delimiter)
+                report_file_delimiter = ';'
+                report_analysis = read_csv(report_file_path_dst, file_separator=report_file_delimiter) #self.report_file_delimiter)
 
                 # plot analysis
                 self.view_report_analysis(report_analysis)

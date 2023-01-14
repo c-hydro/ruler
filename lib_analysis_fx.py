@@ -132,6 +132,7 @@ def get_process_info(process_name, process_sort=None, process_filter=None, verbo
             process_id_step = process_obj_step.pid
             process_vms_step = process_obj_step.memory_info().vms / (1024 * 1024)
             process_cmdline_step = " ".join(process_obj_step.cmdline())
+            # process_interpreter_step, process_script_step = process_obj_step.cmdline()[0], process_obj_step.cmdline()[1]
 
             if (process_name == process_name_step) or (process_name in process_cmdline_step):
                 if process_obj_list is None:
@@ -146,7 +147,17 @@ def get_process_info(process_name, process_sort=None, process_filter=None, verbo
                     process_cmd_list = []
                 process_cmd_list.append(process_cmdline_step)
 
-                log_stream.info(' -------> Found ::: ProcessName "' + process_name_step +
+                if process_name in process_obj_step.cmdline()[0]:
+                    process_tag_step = process_obj_step.cmdline()[0]
+                    log_stream.info(' -------> Found ::: ProcessName in interpreter part of command-line')
+                elif process_name in process_obj_step.cmdline()[1]:
+                    process_tag_step = process_obj_step.cmdline()[1]
+                    log_stream.info(' -------> Found ::: ProcessName in script part of command-line')
+                else:
+                    process_tag_step = process_name_step
+                    log_stream.info(' -------> Found ::: ProcessName in the system executables')
+
+                log_stream.info(' -------> Found ::: ProcessName "' + process_tag_step +
                                 '" ::: ProcessID "' + str(process_id_step) + '"')
                 if verbose:
                     log_stream.info(' -------> Found process info "' + process_name_step + '" ... SELECTED')
